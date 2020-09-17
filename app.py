@@ -12,6 +12,9 @@ import os
 import glob
 import re
 import numpy as np
+import requests
+
+
 
 # Keras
 from tensorflow.keras.applications.imagenet_utils import preprocess_input, decode_predictions
@@ -19,7 +22,7 @@ from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image
 
 # Flask utils
-from flask import Flask, redirect, url_for, request, render_template
+from flask import Flask, redirect, url_for, request, render_template, jsonify
 from werkzeug.utils import secure_filename
 #from gevent.pywsgi import WSGIServer
 
@@ -79,14 +82,33 @@ def upload():
         basepath = os.path.dirname(__file__)
         file_path = os.path.join(
             basepath, 'uploads', secure_filename(f.filename))
+	    
         f.save(file_path)
-
+	
         # Make prediction
         preds = model_predict(file_path, model)
         result=preds
-        return result
+        return jsonify(file_path)
     return None
 
 
+
+@app.route('/predict_api',methods=['POST'])
+def predict_api():
+    '''
+    For direct API calls trought request
+    '''
+    data = request.get_json(force=True)
+    nm = data['image']
+
+    r = requests.get(nm)
+
+    with open('test.png', 'wb') as f:
+        f.write(r.content)
+    file_path = 'test.png'
+
+    preds = model_predict(file_path, model)
+    return jsonify(preds)
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=33)
